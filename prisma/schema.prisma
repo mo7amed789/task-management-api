@@ -3,16 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
   url = env("DATABASE_URL")
 }
 
 model User {
   id Int @id @default(autoincrement()) @map("Id")
-  name String @map("Name") @db.NVarChar(100)
-  email String @unique @map("Email") @db.NVarChar(100)
-  hashPassword String @map("HashPassword") @db.NVarChar(255)
-  role String @default("User") @map("Role") @db.NVarChar(50)
+  name String @map("Name")
+  email String @unique @map("Email")
+  hashPassword String @map("HashPassword")
+  role String @default("User") @map("Role")
   tokenVersion Int @default(1) @map("TokenVersion")
   tasks Task[]
   refreshTokens RefreshToken[]
@@ -37,8 +37,8 @@ model Task {
 }
 model RefreshToken {
   id Int @id @default(autoincrement()) @map("Id")
-  familyId String @map("FamilyId") @db.UniqueIdentifier
-  tokenHash String @unique @map("TokenHash") @db.NVarChar(450)
+  familyId String @map("FamilyId") @db.Uuid
+  tokenHash String @unique @map("TokenHash")
   expiresAt DateTime @map("ExpiresAt")
   createdAt DateTime @map("CreatedAt")
   revokedAt DateTime? @map("RevokedAt")
