@@ -7,7 +7,7 @@ import {PrismaClient} from '@prisma/client';
   let url=configured;
   if(url){
    url=/[?&]sslmode=/i.test(url)?url.replace(/([?&])sslmode=[^&]*/i,'$1sslmode=verify-full'):`${url}${url.includes('?')?'&':'?'}sslmode=verify-full`;
-   if(!/[?&]sslcert=/i.test(url)) url+='&sslcert=botkeep-ca.pem';
+   if(!/[?&]sslcert=/i.test(url)) url+='&sslcert=./prisma/botkeep-ca.pem';
   }
   super(url?{datasources:{db:{url}}}:undefined);
  }
