@@ -4,9 +4,11 @@ import {PrismaClient} from '@prisma/client';
  private readonly log=new Logger(PrismaService.name);
  constructor(){
   const configured=process.env.DATABASE_URL;
-  const url=configured&&/[?&]sslmode=/i.test(configured)
-   ? configured
-   : configured?`${configured}${configured.includes('?')?'&':'?'}sslmode=require`:configured;
+  let url=configured;
+  if(url){
+   url=/[?&]sslmode=/i.test(url)?url.replace(/([?&])sslmode=[^&]*/i,'$1sslmode=verify-full'):`${url}${url.includes('?')?'&':'?'}sslmode=verify-full`;
+   if(!/[?&]sslcert=/i.test(url)) url+='&sslcert=botkeep-ca.pem';
+  }
   super(url?{datasources:{db:{url}}}:undefined);
  }
  async onModuleInit(){void this.connectWithRetry();}
