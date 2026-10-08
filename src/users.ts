@@ -1,0 +1,15 @@
+import {Body,Controller,Delete,Get,Param,Put,Req,UseGuards,ConflictException,BadRequestException,NotFoundException} from '@nestjs/common';
+import {PrismaService} from './prisma.service'; import {JwtGuard,AdminGuard} from './guards';
+const out=(u:any)=>({id:u.id,name:u.name,email:u.email,role:u.role});
+@Controller('api/User') @UseGuards(JwtGuard) export class UserController {
+ constructor(private db:PrismaService){}
+ @Get('me') async me(@Req()r:any){const u=await this.db.user.findUnique({where:{id:r.user.id}});if(!u)throw new NotFoundException({message:'User not found.'});return out(u)}
+ @Put('me') async updateMe(@Req()r:any,@Body()d:any){return this.applyUpdate(r.user.id,d)}
+ @Delete('me') async delMe(@Req()r:any){if(r.user.role==='Admin')throw new BadRequestException({message:'Admin cannot delete himself.'});await this.db.user.delete({where:{id:r.user.id}});return;}
+ @Get() @UseGuards(AdminGuard) all(){return this.db.user.findMany({select:{id:true,name:true,email:true,role:true}})}
+ @Get(':id') @UseGuards(AdminGuard) async one(@Param('id')id:string){const u=await this.db.user.findUnique({where:{id:+id}});if(!u)throw new NotFoundException({message:'User not found.'});return out(u)}
+ @Put(':id') @UseGuards(AdminGuard) update(@Param('id')id:string,@Body()d:any){return this.applyUpdate(+id,d)}
+ @Put(':id/role') @UseGuards(AdminGuard) async role(@Param('id')id:string,@Body()d:any,@Req()r:any){const role=typeof d.role==='string'?(['User','Admin'].find(x=>x.toLowerCase()===d.role.trim().toLowerCase())):null;if(!role||(+id===r.user.id&&role!=='Admin'))throw new BadRequestException({message:'Invalid role or operation is not allowed.'});return this.db.$transaction(async tx=>{const u=await tx.user.findUnique({where:{id:+id}});if(!u)return null;if(u.role==='Admin'&&role!=='Admin'&&await tx.user.count({where:{role:'Admin'}})<=1)throw new BadRequestException({message:'Invalid role or operation is not allowed.'});const x=await tx.user.update({where:{id:+id},data:{role,tokenVersion:{increment:u.role===role?0:1}}});return out(x)},{isolationLevel:'Serializable'})}
+ @Delete(':id') @UseGuards(AdminGuard) async del(@Param('id')id:string,@Req()r:any){if(+id===r.user.id)throw new BadRequestException({message:'User cannot be deleted.'});const u=await this.db.user.findUnique({where:{id:+id}});if(!u||(u.role==='Admin'&&await this.db.user.count({where:{role:'Admin'}})<=1))throw new BadRequestException({message:'User cannot be deleted.'});await this.db.user.delete({where:{id:+id}});return;}
+ private async applyUpdate(id:number,d:any){const data:any={};if(d.name?.trim())data.name=d.name.trim();if(d.email?.trim()){const email=d.email.trim().toLowerCase(),exists=await this.db.user.findFirst({where:{email,id:{not:id}}});if(exists)throw new ConflictException({message:'Email is already in use.'});data.email=email;}const existing=await this.db.user.findUnique({where:{id}});if(!existing)throw new ConflictException({message:'Email is already in use.'});try{return out(await this.db.user.update({where:{id},data}))}catch{throw new ConflictException({message:'Email is already in use.'})}}
+}

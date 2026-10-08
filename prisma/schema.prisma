@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id @default(autoincrement()) @map("Id")
+  name String @map("Name") @db.NVarChar(100)
+  email String @unique @map("Email") @db.NVarChar(100)
+  hashPassword String @map("HashPassword") @db.NVarChar(255)
+  role String @default("User") @map("Role") @db.NVarChar(50)
+  tokenVersion Int @default(1) @map("TokenVersion")
+  tasks Task[]
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+  @@map("Users")
+}
+model Task {
+  id Int @id @default(autoincrement()) @map("Id")
+  title String @map("Title")
+  description String? @map("Description")
+  status Int @default(0) @map("Status")
+  priority Int @default(1) @map("Priority")
+  createdAt DateTime @map("CreatedAt")
+  isCompleted Boolean @default(false) @map("IsCompleted")
+  deadlineNotificationSent Boolean @default(false) @map("DeadlineNotificationSent")
+  userId Int @map("UserId")
+  dueDate DateTime? @map("DueDate")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  notifications Notification[]
+  @@index([userId])
+  @@map("Task")
+}
+model RefreshToken {
+  id Int @id @default(autoincrement()) @map("Id")
+  familyId String @map("FamilyId") @db.UniqueIdentifier
+  tokenHash String @unique @map("TokenHash") @db.NVarChar(450)
+  expiresAt DateTime @map("ExpiresAt")
+  createdAt DateTime @map("CreatedAt")
+  revokedAt DateTime? @map("RevokedAt")
+  userId Int @map("UserId")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId])
+  @@map("RefreshTokens")
+}
+model Notification {
+  id Int @id @default(autoincrement()) @map("Id")
+  userId Int @map("UserId")
+  title String @map("Title")
+  message String @map("Message")
+  type String @map("Type")
+  taskId Int? @map("TaskId")
+  isRead Boolean @default(false) @map("IsRead")
+  createdAt DateTime @map("CreatedAt")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  task Task? @relation(fields:[taskId], references:[id], onDelete:NoAction, onUpdate:NoAction)
+  @@index([userId])
+  @@index([taskId])
+  @@map("Notifications")
+}
